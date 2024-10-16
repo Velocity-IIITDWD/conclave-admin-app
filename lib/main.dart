@@ -24,14 +24,14 @@ class MyApp extends StatelessWidget {
           seedColor: Colors.deepPurple,
           primary: const Color(0xFF080618), // Navigation bar color
         ),
-        appBarTheme: AppBarTheme(
-          backgroundColor: const Color(0xFF080618),
-          titleTextStyle: const TextStyle(
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF080618),
+          titleTextStyle: TextStyle(
             color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
         ),
         useMaterial3: true,
       ),
@@ -78,7 +78,7 @@ class _MyHomePageState extends State<MyHomePage> {
         'company': 'Tech Corp',
         'sector': 'Technology',
         'email': 'john.doe@example.com',
-        'photo': 'https://via.placeholder.com/150'
+        'photo': 'assets/pic.png'
       };
     });
   }
@@ -93,7 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('RSVP QR Code Scanner'),
+        title: const Text('RSVP Scanner'),
       ),
       body: FutureBuilder<void>(
         future: _initializeControllerFuture,
@@ -116,7 +116,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                     child: const Text(
-                      'Get HR Details',
+                      'Scan QR',
                       style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
                   ),
@@ -144,8 +144,9 @@ class _MyHomePageState extends State<MyHomePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           ClipOval(
-                            child: Image.network(
-                              hrDetails!['photo'],
+                            child: Image.asset(
+                              hrDetails![
+                                  'photo'], // Use Image.asset for local images
                               width: 100,
                               height: 100,
                               fit: BoxFit.cover,
@@ -156,7 +157,8 @@ class _MyHomePageState extends State<MyHomePage> {
                               style: const TextStyle(fontSize: 20)),
                           Text("Designation/Role: ${hrDetails!['designation']}",
                               style: const TextStyle(fontSize: 20)),
-                          Text("Organization/Company Name: ${hrDetails!['company']}",
+                          Text(
+                              "Organization/Company Name: ${hrDetails!['company']}",
                               style: const TextStyle(fontSize: 20)),
                           Text("Industry Sector: ${hrDetails!['sector']}",
                               style: const TextStyle(fontSize: 20)),
@@ -172,7 +174,8 @@ class _MyHomePageState extends State<MyHomePage> {
                               padding: const EdgeInsets.all(16.0),
                               child: Text(
                                 "RSVP done successfully!",
-                                style: const TextStyle(fontSize: 18, color: Colors.green),
+                                style: const TextStyle(
+                                    fontSize: 18, color: Colors.green),
                               ),
                             ),
                         ],
@@ -183,7 +186,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             );
           } else {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
         },
       ),
@@ -242,30 +245,95 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 }
 
-class SlidingButton extends StatelessWidget {
+class SlidingButton extends StatefulWidget {
   final VoidCallback onPressed;
   final bool isConfirmed;
 
-  const SlidingButton({Key? key, required this.onPressed, required this.isConfirmed})
-      : super(key: key);
+  const SlidingButton({
+    Key? key,
+    required this.onPressed,
+    required this.isConfirmed,
+  }) : super(key: key);
+
+  @override
+  _SlidingButtonState createState() => _SlidingButtonState();
+}
+
+class _SlidingButtonState extends State<SlidingButton> {
+  double _dragPosition = 0.0;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32.0),
-      child: ElevatedButton(
-        onPressed: isConfirmed ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF080618),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+      child: Stack(
+        children: [
+          // Background track for the slider
+          Container(
+            height: 60,
+            decoration: BoxDecoration(
+              color: const Color(0xFF080618), // Track background color
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  spreadRadius: 3,
+                  blurRadius: 10,
+                ),
+              ],
+            ),
           ),
-        ),
-        child: const Text(
-          'Slide to Confirm RSVP',
-          style: TextStyle(fontSize: 18, color: Colors.white),
-        ),
+          // Sliding button
+          Positioned(
+            left: _dragPosition,
+            child: GestureDetector(
+              onHorizontalDragUpdate: (details) {
+                if (!widget.isConfirmed) {
+                  setState(() {
+                    _dragPosition = details.localPosition.dx.clamp(0.0, 260.0); // Limit the dragging range
+                  });
+                }
+              },
+              onHorizontalDragEnd: (details) {
+                if (_dragPosition > 220) {
+                  widget.onPressed(); // Trigger RSVP confirmation
+                } else {
+                  setState(() {
+                    _dragPosition = 0.0; // Reset the button if not fully dragged
+                  });
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 60,
+                width: 60,
+                decoration: BoxDecoration(
+                  color: widget.isConfirmed ? Colors.green : Colors.white, // Change color on confirmation
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.check, color: Colors.black),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: Center(
+              child: Text(
+                widget.isConfirmed ? 'Confirmed' : 'Slide to Confirm',
+                style: TextStyle(
+                  color: widget.isConfirmed ? Colors.green : Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
