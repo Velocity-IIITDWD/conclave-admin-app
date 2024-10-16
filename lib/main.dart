@@ -54,6 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
   late Future<void> _initializeControllerFuture;
   Map<String, dynamic>? hrDetails;
   bool rsvpConfirmed = false;
+  bool showDetails = false;
 
   @override
   void initState() {
@@ -80,12 +81,19 @@ class _MyHomePageState extends State<MyHomePage> {
         'email': 'john.doe@example.com',
         'photo': 'assets/pic.png'
       };
+      showDetails = true; // Show the HR details card when data is fetched
     });
   }
 
   void confirmRSVP() {
     setState(() {
       rsvpConfirmed = true; // Confirm the RSVP
+    });
+  }
+
+  void closeDetails() {
+    setState(() {
+      showDetails = false; // Close the HR details card
     });
   }
 
@@ -121,7 +129,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 ),
-                if (hrDetails != null) ...[
+                if (showDetails && hrDetails != null) ...[
                   Positioned(
                     bottom: 20,
                     left: 20,
@@ -130,54 +138,91 @@ class _MyHomePageState extends State<MyHomePage> {
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius:
+                            BorderRadius.circular(15), // Rounded corners
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.2),
+                            color: Colors.grey
+                                .withOpacity(0.3), // Slightly darker shadow
                             spreadRadius: 5,
-                            blurRadius: 7,
-                            offset: const Offset(0, 3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5), // Shadow below the card
                           ),
                         ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Stack(
                         children: [
-                          ClipOval(
-                            child: Image.asset(
-                              hrDetails![
-                                  'photo'], // Use Image.asset for local images
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipOval(
+                                child: Image.asset(
+                                  hrDetails![
+                                      'photo'], // Use Image.asset for local images
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text("Full Name: ${hrDetails!['name']}",
+                                  style: const TextStyle(fontSize: 20)),
+                              Text(
+                                  "Designation/Role: ${hrDetails!['designation']}",
+                                  style: const TextStyle(fontSize: 20)),
+                              Text(
+                                  "Organization/Company Name: ${hrDetails!['company']}",
+                                  style: const TextStyle(fontSize: 20)),
+                              Text("Industry Sector: ${hrDetails!['sector']}",
+                                  style: const TextStyle(fontSize: 20)),
+                              Text("Email Address: ${hrDetails!['email']}",
+                                  style: const TextStyle(fontSize: 20)),
+                              const SizedBox(height: 20),
+                              SlidingButton(
+                                onPressed: confirmRSVP,
+                                isConfirmed: rsvpConfirmed,
+                              ),
+                              if (rsvpConfirmed)
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text(
+                                    "RSVP done successfully!",
+                                    style: const TextStyle(
+                                        fontSize: 18, color: Colors.green),
+                                  ),
+                                ),
+                            ],
                           ),
-                          const SizedBox(height: 10),
-                          Text("Full Name: ${hrDetails!['name']}",
-                              style: const TextStyle(fontSize: 20)),
-                          Text("Designation/Role: ${hrDetails!['designation']}",
-                              style: const TextStyle(fontSize: 20)),
-                          Text(
-                              "Organization/Company Name: ${hrDetails!['company']}",
-                              style: const TextStyle(fontSize: 20)),
-                          Text("Industry Sector: ${hrDetails!['sector']}",
-                              style: const TextStyle(fontSize: 20)),
-                          Text("Email Address: ${hrDetails!['email']}",
-                              style: const TextStyle(fontSize: 20)),
-                          const SizedBox(height: 20),
-                          SlidingButton(
-                            onPressed: confirmRSVP,
-                            isConfirmed: rsvpConfirmed,
-                          ),
-                          if (rsvpConfirmed)
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Text(
-                                "RSVP done successfully!",
-                                style: const TextStyle(
-                                    fontSize: 18, color: Colors.green),
+                          // Improved close button design
+                          Positioned(
+                            right: 10,
+                            top: 10,
+                            child: GestureDetector(
+                              onTap: closeDetails,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.red, // Background color
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(
+                                          0.2), // Shadow for the button
+                                      blurRadius: 4,
+                                      offset:
+                                          const Offset(0, 2), // Shadow position
+                                    ),
+                                  ],
+                                ),
+                                padding: const EdgeInsets.all(
+                                    8), // Padding inside the button
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white, // Icon color
+                                  size: 24,
+                                ),
                               ),
                             ),
+                          ),
                         ],
                       ),
                     ),
@@ -290,7 +335,8 @@ class _SlidingButtonState extends State<SlidingButton> {
               onHorizontalDragUpdate: (details) {
                 if (!widget.isConfirmed) {
                   setState(() {
-                    _dragPosition = details.localPosition.dx.clamp(0.0, 260.0); // Limit the dragging range
+                    _dragPosition = details.localPosition.dx
+                        .clamp(0.0, 260.0); // Limit the dragging range
                   });
                 }
               },
@@ -299,7 +345,8 @@ class _SlidingButtonState extends State<SlidingButton> {
                   widget.onPressed(); // Trigger RSVP confirmation
                 } else {
                   setState(() {
-                    _dragPosition = 0.0; // Reset the button if not fully dragged
+                    _dragPosition =
+                        0.0; // Reset the button if not fully dragged
                   });
                 }
               },
@@ -308,7 +355,9 @@ class _SlidingButtonState extends State<SlidingButton> {
                 height: 60,
                 width: 60,
                 decoration: BoxDecoration(
-                  color: widget.isConfirmed ? Colors.green : Colors.white, // Change color on confirmation
+                  color: widget.isConfirmed
+                      ? Colors.green
+                      : Colors.white, // Change color on confirmation
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
