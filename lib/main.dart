@@ -1,125 +1,272 @@
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final cameras = await availableCameras();
+  final firstCamera = cameras.first;
+
+  runApp(MyApp(camera: firstCamera));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final CameraDescription camera;
 
-  // This widget is the root of your application.
+  const MyApp({Key? key, required this.camera}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'RSVP QR Scanner',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        scaffoldBackgroundColor: const Color(0xFFECF5FF), // Background color
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          primary: const Color(0xFF080618), // Navigation bar color
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFF080618),
+          titleTextStyle: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(camera: camera),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  final CameraDescription camera;
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  const MyHomePage({Key? key, required this.camera}) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  late CameraController _controller;
+  late Future<void> _initializeControllerFuture;
+  Map<String, dynamic>? hrDetails;
+  bool rsvpConfirmed = false;
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
+    _controller = CameraController(
+      widget.camera,
+      ResolutionPreset.high,
+    );
+    _initializeControllerFuture = _controller.initialize();
+    _startScanningAnimation(); // Start scanning animation here
+  }
+
+  Future<void> fetchHRDetails() async {
+    // Simulate fetching data with a delay
+    await Future.delayed(const Duration(seconds: 1));
+
+    // Dummy data for demonstration
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      hrDetails = {
+        'name': 'John Doe',
+        'designation': 'HR Manager',
+        'company': 'Tech Corp',
+        'sector': 'Technology',
+        'email': 'john.doe@example.com',
+        'photo': 'https://via.placeholder.com/150'
+      };
+    });
+  }
+
+  void confirmRSVP() {
+    setState(() {
+      rsvpConfirmed = true; // Confirm the RSVP
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: Text('RSVP QR Code Scanner'),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: FutureBuilder<void>(
+        future: _initializeControllerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return Stack(
+              children: [
+                CameraPreview(_controller),
+                _buildScanningOverlay(), // Scanning overlay
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      fetchHRDetails(); // Call the dummy data fetch
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF080618),
+                      padding: const EdgeInsets.all(16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Get HR Details',
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                  ),
+                ),
+                if (hrDetails != null) ...[
+                  Positioned(
+                    bottom: 20,
+                    left: 20,
+                    right: 20,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 5,
+                            blurRadius: 7,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipOval(
+                            child: Image.network(
+                              hrDetails!['photo'],
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text("Full Name: ${hrDetails!['name']}",
+                              style: const TextStyle(fontSize: 20)),
+                          Text("Designation/Role: ${hrDetails!['designation']}",
+                              style: const TextStyle(fontSize: 20)),
+                          Text("Organization/Company Name: ${hrDetails!['company']}",
+                              style: const TextStyle(fontSize: 20)),
+                          Text("Industry Sector: ${hrDetails!['sector']}",
+                              style: const TextStyle(fontSize: 20)),
+                          Text("Email Address: ${hrDetails!['email']}",
+                              style: const TextStyle(fontSize: 20)),
+                          const SizedBox(height: 20),
+                          SlidingButton(
+                            onPressed: confirmRSVP,
+                            isConfirmed: rsvpConfirmed,
+                          ),
+                          if (rsvpConfirmed)
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text(
+                                "RSVP done successfully!",
+                                style: const TextStyle(fontSize: 18, color: Colors.green),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          } else {
+            return Center(child: CircularProgressIndicator());
+          }
+        },
+      ),
+    );
+  }
+
+  // Scanning overlay widget
+  Widget _buildScanningOverlay() {
+    return Center(
+      child: Container(
+        width: 250, // Width of the scanning box
+        height: 250, // Height of the scanning box
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.green, width: 3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AnimatedContainer(
+                height: 2, // Height of the scanning line
+                color: Colors.green,
+                duration: const Duration(milliseconds: 100),
+                curve: Curves.linear,
+                transform: Matrix4.translationValues(0, _scanningPosition, 0),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+
+  double _scanningPosition = 0;
+
+  void _startScanningAnimation() {
+    // Create a periodic timer to animate the scanning line
+    Future.delayed(const Duration(milliseconds: 50), () {
+      setState(() {
+        _scanningPosition += 2; // Adjust scanning line's position
+        if (_scanningPosition > 250) {
+          _scanningPosition = 0; // Reset to top if it goes out of bounds
+        }
+      });
+      _startScanningAnimation(); // Repeat the animation
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}
+
+class SlidingButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final bool isConfirmed;
+
+  const SlidingButton({Key? key, required this.onPressed, required this.isConfirmed})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      child: ElevatedButton(
+        onPressed: isConfirmed ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF080618),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+        child: const Text(
+          'Slide to Confirm RSVP',
+          style: TextStyle(fontSize: 18, color: Colors.white),
+        ),
+      ),
     );
   }
 }
